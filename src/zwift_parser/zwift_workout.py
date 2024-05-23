@@ -1,5 +1,6 @@
 from typing import List
 import xml.etree.ElementTree as ET
+import re
 from bs4 import BeautifulSoup, element
 from zwift_intervals import * 
 from enum import Enum 
@@ -65,6 +66,13 @@ class ZWorkout():
         breadcrumbs = [slugify(b) for b in breadcrumbs if len(b) > 0 and b != '»' and b != 'Workouts']
         self.filename = breadcrumbs.pop(-1)
         self.path = '/'.join(breadcrumbs)
+        self.workout_name = breadcrumbs[0]
+        self.name = self.filename
+        if len(breadcrumbs) > 1:
+            week = self.extract_week_number(breadcrumbs[-1])
+            if week is not None:
+                self.filename = f"Week{week}-{self.filename}"
+                self.name = f"Week{week}/{self.name}"
         self.intervals = [] 
 
         download_button = [a for a in article.find_all('a') if a.string and 'Download workout' in a.string]
@@ -94,7 +102,7 @@ class ZWorkout():
             _, self.author = self.author.get_text().split('Author:')
         self.description = self.description.get_text("\n")
 
-        self.name = 'Zwift Workout'
+        
         self.sport_type = 'bike' 
         self.lookup = {
             'author': self.author,
@@ -102,7 +110,21 @@ class ZWorkout():
             'description': self.description,
             'sport_type': self.sport_type,
         }
-
+    def extract_week_number(self, input_string):
+        cleaned_string = input_string.replace("-", " ").replace("_", " ")
+        pattern = r"\bweek\s(\d+)\b"
+        match = re.search(pattern, cleaned_string, re.IGNORECASE)
+        if match:
+            week_number_str = match.group(1)  
+            week_number = int(week_number_str) 
+            
+            if week_number < 10:
+                week_number_str = "0" + week_number_str
+                
+            return week_number_str 
+        else:
+            return None
+    
     def save(self, export_dir: str): 
         """Saves workout to a specific folder 
 
@@ -130,8 +152,7 @@ class ZWorkout():
             print(f"-- Skipped workout {workout_fullname}")
             return 
 
-        directory = f"{export_dir}/{self.path}"
-
+        directory = f"{export_dir}/{self.workout_name}"
         from os import path, makedirs
         if not path.isdir(directory): makedirs(directory)
 

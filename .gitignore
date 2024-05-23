@@ -133,3 +133,6 @@ dmypy.json
 
 #Export Data 
 export/
+
+#local testing
+src/zwift_parser/tempCodeRunnerFile.py
